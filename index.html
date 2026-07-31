@@ -1672,6 +1672,20 @@
         let activeChannelCategory = 'All';
         let activeQualityMap = {}; 
         let currentAuthMode = 'login'; 
+        window.isPlayerOpenPika = false;
+
+        // Screen rotate hone par status bar force hide karne ka logic
+        window.addEventListener('resize', () => {
+            if (window.isPlayerOpenPika) {
+                try { NativeApp.hideStatus(); } catch(e) {}
+            }
+        });
+        window.addEventListener('orientationchange', () => {
+            if (window.isPlayerOpenPika) {
+                setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 200);
+                setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 600);
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
             updateQuickResumeButton();
@@ -2936,6 +2950,8 @@
             const playerContainer = document.getElementById('player-container');
             playerContainer.style.display = 'flex';
             
+            window.isPlayerOpenPika = true;
+            
             // Fullscreen Request to completely hide Status Bar
             try {
                 const reqFS = playerContainer.requestFullscreen || playerContainer.webkitRequestFullscreen || playerContainer.msRequestFullscreen;
@@ -3027,7 +3043,7 @@
             const qPop = document.getElementById('player-quality-popover');
             if (qPop) qPop.style.display = 'none';
             
-            // NAYA CODE JODA GAYA HAI
+            window.isPlayerOpenPika = false;
             try { NativeApp.showStatus(); } catch(e) {}
             
             currentSeriesPlayback = null;
@@ -3415,8 +3431,9 @@
                 const qPop = document.getElementById('player-quality-popover');
                 if (qPop) qPop.style.display = 'none';
                 
-                // NAYA CODE JODA GAYA HAI
+                window.isPlayerOpenPika = false;
                 try { NativeApp.showStatus(); } catch(e) {}
+                setTimeout(() => { try { NativeApp.showStatus(); } catch(e) {} }, 300);
                 
                 currentSeriesPlayback = null;
                 return;
