@@ -2952,15 +2952,7 @@
             
             window.isPlayerOpenPika = true;
             
-            // Fullscreen Request to completely hide Status Bar
-            try {
-                const reqFS = playerContainer.requestFullscreen || playerContainer.webkitRequestFullscreen || playerContainer.msRequestFullscreen;
-                if (reqFS && !document.fullscreenElement) {
-                    reqFS.call(playerContainer).catch(err => console.log(err));
-                }
-            } catch(e) {}
-
-            // NAYA CODE JODA GAYA HAI
+            // Sirf aur sirf Sketchware Native Call chalega
             try { NativeApp.hideStatus(); } catch(e) {}
             setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 300);
             setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 800);
@@ -3072,12 +3064,6 @@
                     screen.orientation.unlock();
                 }
             } catch(_) {}
-            try {
-                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-                if (exit && (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement)) {
-                    exit.call(document).catch(() => {});
-                }
-            } catch(_) {}
         }
 
         // ---- Auto landscape lock when playback starts ----
@@ -3094,19 +3080,7 @@
             setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 500);
 
             try {
-                const el = playerShell;
-                const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-                if (req && !document.fullscreenElement) {
-                    req.call(el).then(() => {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(() => {});
-                        }
-                    }).catch(() => {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(() => {});
-                        }
-                    });
-                } else if (screen.orientation && screen.orientation.lock) {
+                if (screen.orientation && screen.orientation.lock) {
                     screen.orientation.lock('landscape').catch(() => {});
                 }
             } catch(_) {}
