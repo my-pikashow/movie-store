@@ -305,7 +305,7 @@
 
         /* Admin-controlled promo banner slider */
         .promo-banner-slider {
-            position: relative; width: calc(100% - 32px); margin: 0 16px 20px 16px;
+            position: relative; width: 100%; margin: 0 0 20px 0;
             border-radius: var(--border-radius); overflow: hidden;
             background: var(--c-surface-dark1); padding: 3px; z-index: 1;
             aspect-ratio: 16 / 7; display: none;
@@ -364,7 +364,9 @@
         .media-card-inner {
             position: relative; width: 100%; height: 100%; background: var(--c-surface-dark3); border-radius: 14px; overflow: hidden; z-index: -1;
         }
-        .media-card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px var(--c-brand-glow-20); }
+        @media (hover: hover) {
+            .media-card:hover { transform: translateY(-8px); box-shadow: 0 12px 25px var(--c-brand-glow-20); }
+        }
         
         .media-card img { width: 100%; height: 210px; object-fit: cover; transition: transform 0.5s; display: block; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
         @media (min-width: 768px) { .media-card img { height: 280px; } }
@@ -394,6 +396,41 @@
         .media-grid .media-card img { height: 200px; }
         @media(min-width: 480px) { .media-grid .media-card img { height: 240px; } }
         @media(min-width: 768px) { .media-grid .media-card img { height: 320px; } }
+
+        /* ============ SKELETON LOADER (SHIMMER) ============ */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton-card {
+            position: relative; border-radius: var(--border-radius); overflow: hidden;
+            background: var(--c-surface-dark1); display: block; padding: 3px; z-index: 1;
+        }
+        .skeleton-inner {
+            position: relative; width: 100%; height: 100%; background: var(--c-surface-dark3); border-radius: 14px; overflow: hidden;
+        }
+        .skeleton-img {
+            width: 100%; height: 200px; display: block;
+            background: linear-gradient(90deg, var(--c-surface-dark2) 25%, var(--c-surface-dark1) 50%, var(--c-surface-dark2) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s linear infinite;
+        }
+        @media(min-width: 480px) { .skeleton-img { height: 240px; } }
+        @media(min-width: 768px) { .skeleton-img { height: 320px; } }
+        .skeleton-info {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 45px 10px 10px 10px;
+            background: linear-gradient(to top, var(--c-black) 0%, transparent 100%);
+        }
+        @media (min-width: 768px) { .skeleton-info { padding: 50px 12px 12px 12px; } }
+        .skeleton-title {
+            height: 14px; width: 80%; border-radius: 4px; margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--c-surface-dark1) 25%, var(--c-surface-dark2) 50%, var(--c-surface-dark1) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s linear infinite;
+        }
+        .skeleton-meta {
+            height: 10px; width: 40%; border-radius: 4px;
+            background: linear-gradient(90deg, var(--c-surface-dark1) 25%, var(--c-surface-dark2) 50%, var(--c-surface-dark1) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s linear infinite;
+        }
 
         .floating-search-btn {
             position: fixed;
@@ -757,9 +794,22 @@
             display: flex; align-items: center; justify-content: center;
             opacity: 0; animation: splashLogoReveal 0.8s ease-out 0.2s forwards;
         }        
+        /* New Animation for Boot Loader */
+        @keyframes pulsePulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- ============ INITIAL BOOT LOADER (For Slow Internet) ============ -->
+    <div id="initial-boot-loader" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--c-bg-base); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
+        <div class="premium-conic-spinner"></div>
+        <img src="pikashow.png" alt="Pikashow" style="height: 45px; object-fit: contain; margin-top: 20px; animation: pulsePulse 1.5s infinite alternate;">
+        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 15px; font-weight: 600; letter-spacing: 1px;">CONNECTING TO SERVER...</div>
+    </div>
+    <!-- ================================================================= -->
 
     <!-- AUTHENTICATION GATE PANEL -->
     <div id="user-auth-gate">
@@ -811,9 +861,7 @@
 
     <div id="splash-screen" class="page">
         <!-- Slow Internet / Conic Premium Loading UI -->
-        <div id="splash-slider-container" style="position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-direction: column; background: var(--c-bg-base);">
-            <div class="premium-conic-spinner"></div>
-            <div class="premium-conic-text">PIKASHOW</div>
+        <div id="splash-slider-container" style="position: absolute; inset: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-direction: column; background: var(--c-bg-base) url('209933.webp') center/cover no-repeat;">
         </div>
         <div class="hero-splash-scrim"></div>
         <div class="hero-splash-content">
@@ -1280,7 +1328,7 @@
         <i class="fa-solid fa-play"></i>
     </div>
 
-    <div class="floating-search-btn" onclick="switchTab('search')">
+    <div class="floating-search-btn" id="main-search-btn" onclick="switchTab('search')" style="display: none;">
         <i class="fa-solid fa-magnifying-glass"></i>
     </div>
 
@@ -1347,6 +1395,9 @@
 
             <div class="player-loader-layer" id="player-buffer-loader">
                 <div class="player-loader-spinner" id="mx-loader-spinner"></div>
+                <!-- NEW CODE: Smooth text for slow internet users -->
+                <div style="color: var(--primary-color); font-size: 0.9rem; font-weight: 700; margin-top: 10px; letter-spacing: 1px; text-shadow: 0 0 10px var(--c-black);">Fetching Stream...</div>
+                
                 <p id="player-error-display" style="font-size: 0.95rem; color: #ff5252; font-weight: 600; letter-spacing: 0.5px; padding: 0 20px; text-align: center; display: none;"></p>
             </div>
 
@@ -1582,6 +1633,11 @@
         .mx-skip-overlay-btn:active {
             transform: scale(0.95);
         }
+        /* New Animation for Boot Loader */
+        @keyframes pulsePulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
     </style>
 
 
@@ -1633,6 +1689,15 @@
 
         function setupAuthListener() {
             auth.onAuthStateChanged(user => {
+                
+                // --- NEW CODE: Hide Initial Boot Loader smoothly ---
+                const bootLoader = document.getElementById('initial-boot-loader');
+                if (bootLoader) {
+                    bootLoader.style.opacity = '0';
+                    setTimeout(() => bootLoader.style.display = 'none', 500);
+                }
+                // --------------------------------------------------
+
                 const gate = document.getElementById('user-auth-gate');
                 const splash = document.getElementById('splash-screen');
                 
@@ -1969,7 +2034,7 @@
             slideData.forEach((item, i) => {
                 let div = document.createElement('div');
                 div.className = `splash-slide ${i === 0 ? 'active' : ''}`;
-                div.style.backgroundImage = `url('${item.posterUrl}')`;
+                div.style.backgroundImage = `url('${item.posterUrl}'), url('209933.webp')`;
                 div.dataset.movieId = item.movieId || '';
                 div.addEventListener('click', () => {
                     if (heroSplashSwipeMoved) return; // don't open if this was actually a swipe
@@ -2078,6 +2143,8 @@
 
         function heroSplashNavigate(target) {
             hideSplashScreen();
+            document.getElementById('main-search-btn').style.display = 'flex';
+            updateQuickResumeButton();
             if (target === 'livetv') {
                 switchTab('livetv');
             } else if (target === 'Series') {
@@ -2100,7 +2167,31 @@
             document.getElementById(pageId).classList.add('active');
         }
 
+        function showSkeletonGrid(containerId, count = 15) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                html += `
+                    <div class="skeleton-card">
+                        <div class="skeleton-inner">
+                            <div class="skeleton-img"></div>
+                            <div class="skeleton-info">
+                                <div class="skeleton-title"></div>
+                                <div class="skeleton-meta"></div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+            container.innerHTML = html;
+        }
+
         function initializeDataStreams() {
+            // Skeleton Loader show karega jab tak data nahi aata
+            if (globalMoviesCache.length === 0) showSkeletonGrid('languages-filtered-container', 15);
+            if (globalChannelsCache.length === 0) showSkeletonGrid('channels-display-grid', 15);
+            if (globalSeriesCache.length === 0) showSkeletonGrid('series-display-grid', 15);
+
             db.ref('movies/all').on('value', snap => {
                 globalMoviesCache = [];
                 snap.forEach(child => {
@@ -2168,7 +2259,7 @@
             items.forEach((b, i) => {
                 const slide = document.createElement('div');
                 slide.className = 'promo-banner-slide';
-                slide.style.backgroundImage = `url("${b.imageUrl}")`;
+                slide.style.backgroundImage = `url("${b.imageUrl}"), url('209933.webp')`;
                 if (b.redirectUrl) {
                     slide.addEventListener('click', () => {
                         try { window.open(b.redirectUrl, '_blank', 'noopener'); } catch (e) {}
@@ -2204,7 +2295,7 @@
                 container.innerHTML += `
                     <div class="media-card" onclick="openDetailsModal('${m.id}')">
                         <div class="media-card-inner">
-                            <img src="${m.posterUrl}" alt="${m.title}">
+                            <img src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge">HD</span>
                             <div class="media-info">
                                 <div class="media-title">${m.title}</div>
@@ -2233,7 +2324,7 @@
                 grid.innerHTML += `
                     <div class="media-card" onclick="bootNativePlayerWithKey('${c.id}', 'live')">
                         <div class="media-card-inner">
-                            <img src="${c.logoUrl}" alt="${c.name}">
+                            <img src="${c.logoUrl}" alt="${c.name}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge" style="background:#d32f2f;">LIVE</span>
                             <div class="media-info">
                                 <div class="media-title">${c.name}</div>
@@ -2268,7 +2359,7 @@
                 fontGrid.innerHTML += `
                     <div class="media-card" onclick="openDetailsModal('${m.id}')">
                         <div class="media-card-inner">
-                            <img src="${m.posterUrl}" alt="${m.title}">
+                            <img src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge">HD</span>
                             <div class="media-info">
                                 <div class="media-title">${m.title}</div>
@@ -2284,7 +2375,9 @@
             const m = globalMoviesCache.find(x => x.id === movieId);
             if(!m) return;
 
-            document.getElementById('modal-poster').src = m.posterUrl;
+            let posterEl = document.getElementById('modal-poster');
+            posterEl.onerror = function() { this.src = '209933.webp'; this.onerror = null; };
+            posterEl.src = m.posterUrl || '209933.webp';
             document.getElementById('modal-title').innerText = m.title;
             document.getElementById('modal-meta').innerText = m.category ? m.category : 'General';
 
@@ -2332,7 +2425,10 @@
             let savedId = localStorage.getItem('pk_last_vid');
             let savedTime = localStorage.getItem('pk_last_time');
             let btn = document.getElementById('quick-resume-btn');
-            if (btn && savedId && savedTime && parseFloat(savedTime) > 5) {
+            let splash = document.getElementById('splash-screen');
+            let isSplashActive = splash && splash.classList.contains('active');
+            
+            if (btn && savedId && savedTime && parseFloat(savedTime) > 5 && !isSplashActive) {
                 btn.style.display = 'flex';
             } else if (btn) {
                 btn.style.display = 'none';
@@ -2850,6 +2946,8 @@
 
             // NAYA CODE JODA GAYA HAI
             try { NativeApp.hideStatus(); } catch(e) {}
+            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 300);
+            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 800);
 
             showControlsAutoFade();
 
@@ -2949,6 +3047,10 @@
         }
 
         function unlockPlaybackOrientation() {
+            // Restore normal status bar explicitly when exiting player
+            try { NativeApp.showStatus(); } catch(e) {}
+            setTimeout(() => { try { NativeApp.showStatus(); } catch(e) {} }, 300);
+
             try {
                 if (screen.orientation && screen.orientation.unlock) {
                     screen.orientation.unlock();
@@ -2970,6 +3072,11 @@
                 playerShell.classList.add('rotated-landscape');
             }
             document.body.style.overflow = 'hidden';
+            
+            // Strictly hide status bar in both portrait and landscape when playback starts
+            try { NativeApp.hideStatus(); } catch(e) {}
+            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 500);
+
             try {
                 const el = playerShell;
                 const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
@@ -3081,7 +3188,7 @@
                 grid.innerHTML += `
                     <div class="media-card" onclick="openSeriesDetailsModal('${s.id}')">
                         <div class="media-card-inner">
-                            <img src="${s.posterUrl}" alt="${s.title}">
+                            <img src="${s.posterUrl}" alt="${s.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge" style="background:#f5c518; color:#111;">S${seasonCount}</span>
                             <div class="media-info">
                                 <div class="media-title">${s.title}</div>
@@ -3096,7 +3203,9 @@
             const s = globalSeriesCache.find(x => x.id === seriesId);
             if (!s) return;
             window.history.pushState({ modal: true }, "");
-            document.getElementById('modal-poster').src = s.posterUrl;
+            let posterEl = document.getElementById('modal-poster');
+            posterEl.onerror = function() { this.src = '209933.webp'; this.onerror = null; };
+            posterEl.src = s.posterUrl || '209933.webp';
             document.getElementById('modal-title').innerText = s.title;
             const seasonCount = s.seasons ? Object.keys(s.seasons).length : 0;
             document.getElementById('modal-meta').innerText = `${seasonCount} Season${seasonCount!==1?'s':''} · ${s.category || 'Series'}`;
@@ -3322,6 +3431,14 @@
                 document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
                 const target = document.getElementById(st.tab);
                 if (target) target.classList.add('active');
+                
+                if (st.tab === 'splash-screen') {
+                    document.getElementById('main-search-btn').style.display = 'none';
+                    document.getElementById('quick-resume-btn').style.display = 'none';
+                } else {
+                    document.getElementById('main-search-btn').style.display = 'flex';
+                    updateQuickResumeButton();
+                }
             }
         });
     </script>
