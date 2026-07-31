@@ -7,6 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Pikashow!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -818,7 +822,7 @@
     <!-- ============ INITIAL BOOT LOADER (For Slow Internet) ============ -->
     <div id="initial-boot-loader" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--c-bg-base); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease;">
         <div class="premium-conic-spinner"></div>
-        <img src="pikashow.png" alt="Pikashow" style="height: 45px; object-fit: contain; margin-top: 20px; animation: pulsePulse 1.5s infinite alternate;">
+        <img loading="lazy" decoding="async" src="pikashow.png" alt="Pikashow" style="height: 45px; object-fit: contain; margin-top: 20px; animation: pulsePulse 1.5s infinite alternate;">
         <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 15px; font-weight: 600; letter-spacing: 1px;">CONNECTING TO SERVER...</div>
     </div>
     <!-- ================================================================= -->
@@ -878,7 +882,7 @@
         <div class="hero-splash-scrim"></div>
         <div class="hero-splash-content">
             <div class="hero-splash-brand">
-                <img src="pikashow.png" alt="Pikashow" style="height: 38px; object-fit: contain;">
+                <img loading="lazy" decoding="async" src="pikashow.png" alt="Pikashow" style="height: 38px; object-fit: contain;">
             </div>
 
             <div class="hero-splash-bottom-stack">
@@ -1348,7 +1352,7 @@
         <div class="popup-content" onclick="event.stopPropagation()">
             <div class="popup-inner-wrap">
                 <div class="popup-poster-wrap">
-                    <img id="modal-poster" class="popup-banner" src="" alt="Poster">
+                    <img loading="lazy" decoding="async" id="modal-poster" class="popup-banner" src="" alt="Poster">
                     <span class="popup-hd-badge">HD</span>
                     <div class="popup-play-circle" id="modal-play-btn"><i class="fa-solid fa-play"></i></div>
                 </div>
@@ -2307,7 +2311,7 @@
                 container.innerHTML += `
                     <div class="media-card" onclick="openDetailsModal('${m.id}')">
                         <div class="media-card-inner">
-                            <img src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
+                            <img loading="lazy" decoding="async" src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge">HD</span>
                             <div class="media-info">
                                 <div class="media-title">${m.title}</div>
@@ -2336,7 +2340,7 @@
                 grid.innerHTML += `
                     <div class="media-card" onclick="bootNativePlayerWithKey('${c.id}', 'live')">
                         <div class="media-card-inner">
-                            <img src="${c.logoUrl}" alt="${c.name}" onerror="this.onerror=null;this.src='209933.webp';">
+                            <img loading="lazy" decoding="async" src="${c.logoUrl}" alt="${c.name}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge" style="background:#d32f2f;">LIVE</span>
                             <div class="media-info">
                                 <div class="media-title">${c.name}</div>
@@ -2371,7 +2375,7 @@
                 fontGrid.innerHTML += `
                     <div class="media-card" onclick="openDetailsModal('${m.id}')">
                         <div class="media-card-inner">
-                            <img src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
+                            <img loading="lazy" decoding="async" src="${m.posterUrl}" alt="${m.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge">HD</span>
                             <div class="media-info">
                                 <div class="media-title">${m.title}</div>
@@ -2550,18 +2554,27 @@
                 triggerPlaybackError(`Playback Error Detected (Code ${code}): Stream cannot be loaded.`);
             });
 
+            let __pkLastUiSecond = -1;
+            let __pkLastSaveSecond = -1;
             videoCore.addEventListener('timeupdate', () => {
                 if(currentPlayerMode !== 'live' && videoCore.duration) {
+                    // Throttle heavy DOM work to once per second for smoothness
+                    const __sec = Math.floor(videoCore.currentTime);
+                    if (__sec === __pkLastUiSecond) return;
+                    __pkLastUiSecond = __sec;
+
                     let percent = (videoCore.currentTime / videoCore.duration) * 100;
-                    if (!isSeeking) {
+                    if (!isSeeking && __pkSeekTarget === null) {
                         seekbarInput.value = percent;
                         seekbarInput.style.background = `linear-gradient(to right, var(--primary-color) ${percent}%, rgba(255, 255, 255, 0.2) ${percent}%)`;
+                        seekbarInput.style.setProperty('--seek-progress', percent + '%');
+                        timeCurrentDisplay.innerText = formatClock(videoCore.currentTime);
                     }
-                    timeCurrentDisplay.innerText = formatClock(videoCore.currentTime);
                     timeTotalDisplay.innerText = formatClock(videoCore.duration);
                     
-                    // Save Resume State (Starts saving after 5 seconds)
-                    if (currentPlayingVideoId && videoCore.currentTime > 5) {
+                    // Save Resume State (Starts saving after 5 seconds, throttled)
+                    if (currentPlayingVideoId && videoCore.currentTime > 5 && __sec - __pkLastSaveSecond >= 5) {
+                        __pkLastSaveSecond = __sec;
                         localStorage.setItem('pk_last_vid', currentPlayingVideoId);
                         localStorage.setItem('pk_last_time', videoCore.currentTime);
                     }
@@ -2619,8 +2632,9 @@
 
             seekbarInput.addEventListener('mousedown', () => isSeeking = true);
             seekbarInput.addEventListener('touchstart', () => isSeeking = true, {passive: true});
-            seekbarInput.addEventListener('mouseup', () => isSeeking = false);
-            seekbarInput.addEventListener('touchend', () => isSeeking = false);
+            seekbarInput.addEventListener('mouseup', () => { isSeeking = false; __pkCommitSeek(); });
+            seekbarInput.addEventListener('touchend', () => { isSeeking = false; __pkCommitSeek(); });
+            seekbarInput.addEventListener('change', () => { isSeeking = false; __pkCommitSeek(); });
 
             function handleRotatedSeekTouch(e) {
                 if (!videoCore.duration) return;
@@ -2890,7 +2904,7 @@
             if (nextLink.includes('.m3u8')) {
                 if (Hls.isSupported()) {
                     if(hlsInstance) { hlsInstance.destroy(); }
-                    hlsInstance = new Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, maxBufferSize: 90 * 1000 * 1000, backBufferLength: 90, enableWorker: true, lowLatencyMode: false, startFragPrefetch: true, progressive: true, testBandwidth: true, abrEwmaDefaultEstimate: 1000000 });
+                    hlsInstance = new Hls(PK_HLS_CONFIG);
                     hlsInstance.loadSource(nextLink);
                     hlsInstance.attachMedia(videoCore);
                     hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -3043,7 +3057,7 @@
 
             if (streamUrl.includes('.m3u8')) {
                 if (Hls.isSupported()) {
-                    hlsInstance = new Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, maxBufferSize: 90 * 1000 * 1000, backBufferLength: 90, enableWorker: true, lowLatencyMode: false, startFragPrefetch: true, progressive: true, testBandwidth: true, abrEwmaDefaultEstimate: 1000000 });
+                    hlsInstance = new Hls(PK_HLS_CONFIG);
                     hlsInstance.loadSource(streamUrl);
                     hlsInstance.attachMedia(videoCore);
                     hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => { 
@@ -3069,23 +3083,99 @@
             playIcon.className = "fa-solid fa-pause";
         }
 
-        function seekVideo(val) {
-            if(currentPlayerMode !== 'live' && videoCore.duration) {
-                let position = (val / 100) * videoCore.duration;
-                videoCore.currentTime = position;
+        // Tuned HLS config: smaller, seek-friendly buffers + instant recovery
+        const PK_HLS_CONFIG = {
+            enableWorker: true,
+            lowLatencyMode: false,
+            startFragPrefetch: true,
+            progressive: false,
+            testBandwidth: false,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 90,
+            maxBufferSize: 60 * 1000 * 1000,
+            backBufferLength: 30,
+            maxBufferHole: 0.5,
+            highBufferWatchdogPeriod: 1,
+            nudgeMaxRetries: 10,
+            nudgeOffset: 0.2,
+            maxFragLookUpTolerance: 0.2,
+            abrEwmaDefaultEstimate: 1500000,
+            abrBandWidthFactor: 0.95,
+            abrBandWidthUpFactor: 0.7,
+            manifestLoadingMaxRetry: 4,
+            levelLoadingMaxRetry: 4,
+            fragLoadingMaxRetry: 6,
+            fragLoadingRetryDelay: 500
+        };
+
+        // ================= FAST SEEK ENGINE =================
+        // Coalesces rapid seekbar drags & 10s skips into a single seek so the
+        // player never re-buffers for every intermediate position.
+        let __pkSeekTarget = null;
+        let __pkSeekTimer = 0;
+        let __pkSeekPaintRaf = 0;
+        let __pkWasPlayingBeforeSeek = false;
+
+        function __pkPaintSeek(percent) {
+            const val = Math.min(Math.max(percent, 0), 100);
+            if (__pkSeekPaintRaf) cancelAnimationFrame(__pkSeekPaintRaf);
+            __pkSeekPaintRaf = requestAnimationFrame(() => {
+                __pkSeekPaintRaf = 0;
+                seekbarInput.value = val;
                 seekbarInput.style.background = `linear-gradient(to right, var(--primary-color) ${val}%, rgba(255, 255, 255, 0.2) ${val}%)`;
-            }
+                seekbarInput.style.setProperty('--seek-progress', val + '%');
+                if (videoCore.duration) {
+                    timeCurrentDisplay.innerText = formatClock((val / 100) * videoCore.duration);
+                }
+            });
+        }
+
+        function __pkCommitSeek() {
+            if (__pkSeekTimer) { clearTimeout(__pkSeekTimer); __pkSeekTimer = 0; }
+            if (__pkSeekTarget === null || !videoCore.duration) return;
+            const target = Math.min(Math.max(__pkSeekTarget, 0), Math.max(videoCore.duration - 0.5, 0));
+            __pkSeekTarget = null;
+            try {
+                if (typeof videoCore.fastSeek === 'function') videoCore.fastSeek(target);
+                else videoCore.currentTime = target;
+            } catch (e) { videoCore.currentTime = target; }
+            if (__pkWasPlayingBeforeSeek) { videoCore.play().catch(() => {}); }
+        }
+
+        function __pkQueueSeek(targetSeconds, delay) {
+            if (currentPlayerMode === 'live' || !videoCore.duration) return;
+            if (__pkSeekTarget === null) __pkWasPlayingBeforeSeek = !videoCore.paused;
+            __pkSeekTarget = Math.min(Math.max(targetSeconds, 0), Math.max(videoCore.duration - 0.5, 0));
+            __pkPaintSeek((__pkSeekTarget / videoCore.duration) * 100);
+            if (__pkSeekTimer) clearTimeout(__pkSeekTimer);
+            __pkSeekTimer = setTimeout(__pkCommitSeek, delay);
+        }
+
+        function __pkSeekBase() {
+            return __pkSeekTarget !== null ? __pkSeekTarget : videoCore.currentTime;
+        }
+
+        function seekVideo(val) {
+            if (currentPlayerMode === 'live' || !videoCore.duration) return;
+            __pkQueueSeek((val / 100) * videoCore.duration, 90);
         }
 
         function rewindTenSeconds() {
-            if (videoCore.currentTime > 10) videoCore.currentTime -= 10;
-            else videoCore.currentTime = 0;
+            if (currentPlayerMode === 'live' || !videoCore.duration) {
+                if (videoCore.currentTime > 10) videoCore.currentTime -= 10; else videoCore.currentTime = 0;
+            } else {
+                __pkQueueSeek(__pkSeekBase() - 10, 160);
+            }
             triggerMXFlash('left');
             showControlsAutoFade();
         }
 
         function forwardTenSeconds() {
-            if (videoCore.duration && videoCore.currentTime + 10 < videoCore.duration) videoCore.currentTime += 10;
+            if (currentPlayerMode === 'live' || !videoCore.duration) {
+                if (videoCore.duration && videoCore.currentTime + 10 < videoCore.duration) videoCore.currentTime += 10;
+            } else {
+                __pkQueueSeek(__pkSeekBase() + 10, 160);
+            }
             triggerMXFlash('right');
             showControlsAutoFade();
         }
@@ -3266,7 +3356,7 @@
                 grid.innerHTML += `
                     <div class="media-card" onclick="openSeriesDetailsModal('${s.id}')">
                         <div class="media-card-inner">
-                            <img src="${s.posterUrl}" alt="${s.title}" onerror="this.onerror=null;this.src='209933.webp';">
+                            <img loading="lazy" decoding="async" src="${s.posterUrl}" alt="${s.title}" onerror="this.onerror=null;this.src='209933.webp';">
                             <span class="hd-badge" style="background:#f5c518; color:#111;">S${seasonCount}</span>
                             <div class="media-info">
                                 <div class="media-title">${s.title}</div>
