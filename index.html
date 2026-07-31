@@ -532,6 +532,18 @@
         .popup-info-bar h2 { margin: 0 0 8px 0; font-size: 1.4rem; color: var(--c-text-dark); font-weight: 800; line-height: 1.2; }
         .popup-info-bar p { color: var(--c-desc-gray); font-size: 0.95rem; margin: 0; font-weight: 500; }
 
+        /* Immersive playback: status bar fully hidden (portrait + landscape) */
+        body.pk-immersive { padding: 0 !important; }
+        body.pk-immersive #player-container {
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            width: 100dvw; height: 100dvh;
+            padding: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        body.pk-immersive #player-container video { padding: 0 !important; }
+
         #player-container {
             position: fixed; top:0; left:0; width:100vw; height:100vh;
             width:100dvw; height:100dvh;
@@ -1672,20 +1684,6 @@
         let activeChannelCategory = 'All';
         let activeQualityMap = {}; 
         let currentAuthMode = 'login'; 
-        window.isPlayerOpenPika = false;
-
-        // Screen rotate hone par status bar force hide karne ka logic
-        window.addEventListener('resize', () => {
-            if (window.isPlayerOpenPika) {
-                try { NativeApp.hideStatus(); } catch(e) {}
-            }
-        });
-        window.addEventListener('orientationchange', () => {
-            if (window.isPlayerOpenPika) {
-                setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 200);
-                setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 600);
-            }
-        });
 
         window.addEventListener('DOMContentLoaded', () => {
             updateQuickResumeButton();
@@ -2926,6 +2924,90 @@
             }
         }
 
+        // ================= IMMERSIVE PLAYBACK (STATUS BAR HIDE) =================
+        let __pkImmersiveOn = false;
+
+        function __pkNative(fnNames) {
+            fnNames.forEach(function (fn) {
+                try {
+                    if (typeof NativeApp !== 'undefined' && NativeApp && typeof NativeApp[fn] === 'function') {
+                        NativeApp[fn]();
+                    }
+                } catch (_) {}
+                try {
+                    if (window.Android && typeof window.Android[fn] === 'function') { window.Android[fn](); }
+                } catch (_) {}
+            });
+        }
+
+        function __pkIsFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+        }
+
+        function __pkRequestFullscreen() {
+            const el = document.getElementById('player-container') || document.documentElement;
+            try {
+                const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                if (req && !__pkIsFullscreen()) {
+                    const r = req.call(el, { navigationUI: 'hide' });
+                    if (r && r.catch) r.catch(function () {
+                        try {
+                            const d = document.documentElement;
+                            const dreq = d.requestFullscreen || d.webkitRequestFullscreen || d.msRequestFullscreen;
+                            if (dreq && !__pkIsFullscreen()) { const rr = dreq.call(d); if (rr && rr.catch) rr.catch(function(){}); }
+                        } catch (_) {}
+                    });
+                }
+            } catch (_) {}
+        }
+
+        function __pkKeepImmersive() {
+            if (!__pkImmersiveOn) return;
+            const shell = document.getElementById('player-container');
+            if (!shell || shell.style.display === 'none') return;
+            __pkNative(['hideStatus', 'hideSystemUI', 'enterFullscreen', 'setFullscreen']);
+            if (!__pkIsFullscreen()) __pkRequestFullscreen();
+        }
+
+        function __pkImmersiveRetouch() { __pkKeepImmersive(); }
+
+        function enterImmersivePlayback() {
+            __pkImmersiveOn = true;
+            document.body.classList.add('pk-immersive');
+            document.body.style.overflow = 'hidden';
+            __pkNative(['hideStatus', 'hideSystemUI', 'enterFullscreen', 'setFullscreen']);
+            __pkRequestFullscreen();
+            // Re-arm whenever the system/browser drops fullscreen (rotation, gesture, resume)
+            document.addEventListener('fullscreenchange', __pkKeepImmersive);
+            document.addEventListener('webkitfullscreenchange', __pkKeepImmersive);
+            window.addEventListener('orientationchange', __pkImmersiveRetouch);
+            window.addEventListener('resize', __pkImmersiveRetouch);
+            document.addEventListener('visibilitychange', __pkImmersiveRetouch);
+            document.addEventListener('touchend', __pkImmersiveRetouch, true);
+            document.addEventListener('click', __pkImmersiveRetouch, true);
+            setTimeout(__pkKeepImmersive, 300);
+            setTimeout(__pkKeepImmersive, 1200);
+        }
+
+        function exitImmersivePlayback() {
+            __pkImmersiveOn = false;
+            document.removeEventListener('fullscreenchange', __pkKeepImmersive);
+            document.removeEventListener('webkitfullscreenchange', __pkKeepImmersive);
+            window.removeEventListener('orientationchange', __pkImmersiveRetouch);
+            window.removeEventListener('resize', __pkImmersiveRetouch);
+            document.removeEventListener('visibilitychange', __pkImmersiveRetouch);
+            document.removeEventListener('touchend', __pkImmersiveRetouch, true);
+            document.removeEventListener('click', __pkImmersiveRetouch, true);
+            document.body.classList.remove('pk-immersive');
+            document.body.style.overflow = '';
+            try {
+                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                if (exit && __pkIsFullscreen()) { const r = exit.call(document); if (r && r.catch) r.catch(function(){}); }
+            } catch (_) {}
+            __pkNative(['showStatus', 'showSystemUI', 'exitFullscreen', 'unsetFullscreen']);
+        }
+        // ======================================================================
+
         function bootPlayerEngineCore(streamUrl, title) {
             window.history.pushState({ player: true }, "");
             document.getElementById('mx-stream-title-text').innerText = title;
@@ -2950,12 +3032,8 @@
             const playerContainer = document.getElementById('player-container');
             playerContainer.style.display = 'flex';
             
-            window.isPlayerOpenPika = true;
-            
-            // Sirf aur sirf Sketchware Native Call chalega
-            try { NativeApp.hideStatus(); } catch(e) {}
-            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 300);
-            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 800);
+            // Fullscreen + immersive mode: status bar fully hidden (portrait & landscape)
+            enterImmersivePlayback();
 
             showControlsAutoFade();
 
@@ -3035,8 +3113,8 @@
             const qPop = document.getElementById('player-quality-popover');
             if (qPop) qPop.style.display = 'none';
             
-            window.isPlayerOpenPika = false;
-            try { NativeApp.showStatus(); } catch(e) {}
+            // Restore normal UI (status bar back)
+            exitImmersivePlayback();
             
             currentSeriesPlayback = null;
             if (e && e.type === 'click') { window.history.back(); }
@@ -3055,13 +3133,15 @@
         }
 
         function unlockPlaybackOrientation() {
-            // Restore normal status bar explicitly when exiting player
-            try { NativeApp.showStatus(); } catch(e) {}
-            setTimeout(() => { try { NativeApp.showStatus(); } catch(e) {} }, 300);
-
             try {
                 if (screen.orientation && screen.orientation.unlock) {
                     screen.orientation.unlock();
+                }
+            } catch(_) {}
+            try {
+                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                if (exit && (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement)) {
+                    exit.call(document).catch(() => {});
                 }
             } catch(_) {}
         }
@@ -3074,13 +3154,21 @@
                 playerShell.classList.add('rotated-landscape');
             }
             document.body.style.overflow = 'hidden';
-            
-            // Strictly hide status bar in both portrait and landscape when playback starts
-            try { NativeApp.hideStatus(); } catch(e) {}
-            setTimeout(() => { try { NativeApp.hideStatus(); } catch(e) {} }, 500);
-
+            if (typeof enterImmersivePlayback === 'function') enterImmersivePlayback();
             try {
-                if (screen.orientation && screen.orientation.lock) {
+                const el = playerShell;
+                const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                if (req && !document.fullscreenElement) {
+                    req.call(el).then(() => {
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        }
+                    }).catch(() => {
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        }
+                    });
+                } else if (screen.orientation && screen.orientation.lock) {
                     screen.orientation.lock('landscape').catch(() => {});
                 }
             } catch(_) {}
@@ -3405,9 +3493,8 @@
                 const qPop = document.getElementById('player-quality-popover');
                 if (qPop) qPop.style.display = 'none';
                 
-                window.isPlayerOpenPika = false;
-                try { NativeApp.showStatus(); } catch(e) {}
-                setTimeout(() => { try { NativeApp.showStatus(); } catch(e) {} }, 300);
+                // Restore normal UI (status bar back)
+                exitImmersivePlayback();
                 
                 currentSeriesPlayback = null;
                 return;
